@@ -1,15 +1,9 @@
-﻿
-
-// For more information see https://aka.ms/fsharp-console-apps
-printfn "Hello from F#"
-
-open System
+﻿open System
 
 type Point = {
   X: int
   Y: int
 }
-  with override this.ToString() = sprintf "%d,%d" this.X this.Y
 
 type LineSegment = {
   A: Point
@@ -44,27 +38,47 @@ let is_vertical (line: LineSegment) : bool =
 let is_horizontal_or_vertical (line: LineSegment): bool =
     (is_horizontal line) || (is_vertical line)
 
+let normalize_if_horizontal (line: LineSegment): LineSegment =
+  if line.A.Y = line.B.Y && line.A.X > line.B.X then
+    {A=line.B; B=line.A}
+  else
+    line
+
+let normalize_if_vertical (line: LineSegment): LineSegment =
+  if line.A.X = line.B.X && line.A.Y > line.B.Y then
+    {A=line.B; B=line.A}
+  else
+    line
+
+let normalize_if_diagonal (line: LineSegment): LineSegment =
+  if line.A.X <> line.B.X && line.A.Y <> line.B.Y && line.A.X > line.B.X then
+    {A=line.B; B=line.A}
+  else
+    line
+
 let points_along_line (line: LineSegment) : seq<Point> =
     // Vertical
     if line.A.X = line.B.X then
-      if line.A.Y < line.B.Y then
-        seq { for y in line.A.Y .. line.B.Y -> {X=line.A.X; Y=y} }
-      else 
-        seq { for y in line.B.Y .. line.A.Y -> {X=line.A.X; Y=y} }
+      seq { for y in line.A.Y .. line.B.Y -> {X=line.A.X; Y=y} }
     // Horizontal
+    elif line.A.Y = line.B.Y then
+      seq { for x in line.A.X .. line.B.X -> {Y=line.A.Y; X=x} }
+    // Diagonal 1
+    elif line.A.Y > line.B.Y then
+      seq { for x in line.A.X .. line.B.X -> {Y=line.A.Y + (line.A.X-x); X=x} }
+    // Diagonal 2
     else
-      if line.A.X < line.B.X then
-        seq { for x in line.A.X .. line.B.X -> {Y=line.A.Y; X=x} }
-      else 
-        seq { for x in line.B.X .. line.A.X -> {Y=line.A.Y; X=x} }
+      seq { for x in line.A.X .. line.B.X -> {Y=line.A.Y - (line.A.X-x); X=x} }
 
 let lines =
     fun _ -> Console.ReadLine()
     |> Seq.initInfinite
     |> Seq.takeWhile ((<>) null)
     |> Seq.map parseLine
-    |> Seq.toList
-    |> Seq.filter is_horizontal_or_vertical 
+    // |> Seq.filter is_horizontal_or_vertical 
+    |> Seq.map normalize_if_horizontal
+    |> Seq.map normalize_if_vertical
+    |> Seq.map normalize_if_diagonal
     |> Seq.toList
 
 printfn "lines=%A" lines
@@ -121,6 +135,9 @@ let pointsFreqMap =
   points
   |> Map.ofSeq
 
+printfn "%A" (points_along_line (normalize_if_diagonal {A={X=1; Y=1}; B={X=3;Y=3}}))
+printfn "%A" (points_along_line (normalize_if_diagonal {A={X=9; Y=7}; B={X=7;Y=9}}))
+
 let draw_dots =
   for y in minX .. maxX do
     for x in minY .. maxY do
@@ -130,7 +147,3 @@ let draw_dots =
     printfn ""
 
 draw_dots
-
-// Let's do it sparsely, with a map.
-// Convert each line to a set of points
-// Then collect them in a map
