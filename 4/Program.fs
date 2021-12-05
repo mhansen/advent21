@@ -35,12 +35,6 @@ let boards =
 
 type Marking = list<list<bool>>
 
-let win_diagonal_1 (board: Marking): bool =
-    board.[0].[0] && board.[1].[1] && board.[2].[2] && board.[3].[3] && board.[4].[4]
-
-let win_diagonal_2 (board: Marking): bool =
-    board.[4].[0] && board.[3].[1] && board.[2].[2] && board.[1].[3] && board.[0].[4]
-
 let win_horizontal (board: Marking): bool =
     board
     |> Seq.exists (fun x -> Seq.forall id x)
@@ -161,4 +155,34 @@ let print_boards_and_markings (s: BingoState) =
 
 let winning_score = (play (initial_boards_and_markings) (numbers))
 printfn "%A" winning_score
+print_board_and_marking winning_score.Board
+
+
+// Part 2
+let rec play_to_win_last (state: BingoState) (nextNumbers: list<int>): Score =
+    let number = nextNumbers[0]
+    let newState =
+        call_number number state
+    let stateOnlyLosers =
+        newState
+        |> List.filter (fun x -> not (win_bm x))
+        
+    let winning_boards =
+        newState
+        |> List.filter win_bm
+    if stateOnlyLosers.Length = 0 && winning_boards.Length > 0 then
+        let winning_board = winning_boards[0]
+        let unmarked = unmarked_numbers winning_board
+        let unmarked_sum = List.sum (List.map List.sum unmarked)
+        {
+            LastNumberCalled=number
+            UnmarkedNumbers=unmarked
+            UnmarkedSum=unmarked_sum
+            Score=unmarked_sum * number
+            Board=winning_board
+        }
+    else play_to_win_last stateOnlyLosers (nextNumbers[1..])
+
+let last_winning_score = (play_to_win_last (initial_boards_and_markings) (numbers))
+printfn "%A" last_winning_score
 print_board_and_marking winning_score.Board
