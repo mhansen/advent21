@@ -1,0 +1,62 @@
+#!fsharp
+
+let line =
+  System.IO.File.ReadAllLines("input.txt")[0]
+  
+let input =
+  line.Split ","
+  |> Seq.map int
+  |> Seq.toList
+
+input
+
+#!fsharp
+
+type Position = int
+type Fuel = int
+let fuel_to_move_to (p: Position) (positions: seq<Position>): Fuel =
+  positions
+  |> Seq.map (fun x -> abs (x - p))
+  |> Seq.sum
+
+fuel_to_move_to 2 input
+
+#!fsharp
+
+let fuel_positions (positions: seq<Position>): seq<Fuel> =
+  let minPos = positions |> Seq.min
+  let maxPos = positions |> Seq.max
+  seq { minPos..maxPos }
+  |> Seq.map (fun p -> fuel_to_move_to p positions)
+
+fuel_positions input
+|> Seq.min
+
+#!fsharp
+
+let rec fuel_for_distance (d: int): Fuel =
+  match d with
+  | 0 -> 0
+  | x -> x + fuel_for_distance (x - 1)
+
+fuel_for_distance 9
+
+#!fsharp
+
+let fuel_to_move_to2 (p: Position) (positions: seq<Position>): Fuel =
+  positions
+  |> Seq.map (fun x -> fuel_for_distance (abs (x - p)))
+  |> Seq.sum
+
+fuel_to_move_to2 2 input
+
+#!fsharp
+
+let fuel_positions (positions: seq<Position>): seq<Fuel> =
+  let minPos = positions |> Seq.min
+  let maxPos = positions |> Seq.max
+  seq { minPos..maxPos }
+  |> Seq.map (fun p -> fuel_to_move_to2 p positions)
+
+fuel_positions input
+|> Seq.min
