@@ -98,4 +98,5 @@ iterate_school_map 256 (school_to_map input)
 #!fsharp
 
 iterate_school_map 256 (school_to_map input)
-|> Seq.sumBy (fun kv -> kv.Value)
+|> Map.values
+|> Seq.sum
