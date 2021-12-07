@@ -1,0 +1,101 @@
+#!fsharp
+
+let input =
+  System.IO.File.ReadLines("input.txt")
+  |> Seq.map (fun x -> x.Split(","))
+  |> Seq.concat
+  |> Seq.map int
+  |> Seq.toList
+
+input
+
+#!fsharp
+
+let iterate_fish (fish: int) : seq<int> =
+  if fish = 0 then
+    [6; 8]
+  else
+    [fish - 1]
+
+iterate_fish 0, iterate_fish 1
+
+#!fsharp
+
+let next_school (school : seq<int>) : seq<int> =
+  school
+  |> Seq.map iterate_fish
+  |> Seq.concat
+
+next_school input
+
+#!fsharp
+
+let rec iterate_school (days: int) (school: seq<int>) : seq<int> =
+  if days = 0 then
+    school
+  else
+    iterate_school (days - 1) (next_school school)
+
+iterate_school 18 input
+|> Seq.length
+
+#!fsharp
+
+iterate_school 256 input
+|> Seq.length
+
+#!fsharp
+
+type School = Map<int64, int64>
+
+let school_to_map (school: seq<int>) : School =
+  school
+  |> Seq.groupBy id
+  |> Seq.map (fun (x, y) -> (int64 x, int64 (Seq.length y)))
+  |> Map.ofSeq
+  
+school_to_map input
+
+#!fsharp
+
+let next_school_map (school : School) : School =
+  Map.fold (fun acc key value ->
+    match Map.tryFind key acc with
+    | Some v -> Map.add key v acc
+    | None -> Map.add key value acc) Map.empty school
+
+next_school_map (school_to_map input)
+
+#!fsharp
+
+let next_school2 (school: School) =
+  school
+  |> Map.toSeq
+  |> Seq.map (fun (timer, freq) ->
+    if timer = 0 then
+      [[int64 8; freq]; [int64 6; freq]]
+    else
+      [[(timer - int64 1); freq]]
+  )
+  |> Seq.concat
+  |> Seq.groupBy (fun x -> x[0])
+  |> Seq.map (fun (x, y) -> (x, y |> Seq.sumBy (fun x -> x[1])))
+  |> Map.ofSeq
+
+next_school2 (Map.ofList [(0, 10); (7, 1)])
+
+#!fsharp
+
+let rec iterate_school_map (days: int) (school: School) : School =
+  if days = 0 then
+    school
+  else
+    iterate_school_map (days - 1) (next_school2 school)
+
+iterate_school_map 256 (school_to_map input)
+|> Seq.sumBy (fun kv -> kv.Value)
+
+#!fsharp
+
+iterate_school_map 256 (school_to_map input)
+|> Seq.sumBy (fun kv -> kv.Value)
