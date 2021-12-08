@@ -1,0 +1,207 @@
+#!fsharp
+
+type Pattern = Set<int>
+
+type Patterns = Set<Pattern>
+
+type Line = {
+  Ten: Patterns
+  Puzzle: seq<Pattern>
+}
+
+#!fsharp
+
+let char_to_int (c: char) : int =
+  (int c) - (int 'a')
+
+char_to_int 'a', char_to_int 'g'
+
+#!fsharp
+
+let pattern_to_ints (p: string) : Set<int> =
+  p
+  |> Seq.map char_to_int
+  |> Set.ofSeq
+
+pattern_to_ints "abc"
+
+#!fsharp
+
+let parsePatterns (patterns: string): seq<Pattern> =
+  patterns.Trim().Split(" ")
+  |> Seq.map pattern_to_ints
+
+parsePatterns "abc def g"
+
+#!fsharp
+
+let parseLine (line: string): Line = 
+  let p =
+    line.Split("|")
+    |> Seq.map parsePatterns
+    |> Seq.toList
+  {Ten=(Set.ofSeq p[0]); Puzzle=p[1]}
+
+
+let parseFile (f: string): seq<Line> =
+  System.IO.File.ReadAllLines(f)
+  |> Seq.map parseLine
+
+let sample = parseFile "sample.txt"
+sample
+
+#!fsharp
+
+parseFile "input.txt"
+
+#!fsharp
+
+let segments =
+ [("abcefg")
+  ("cf")
+  ("acdeg")
+  ("acdfg")
+  ("bcdf")
+  ("abdfg")
+  ("abdefg")
+  ("acf")
+  ("acbdefg")
+  ("acbdfg")
+  ]
+  |> Seq.map pattern_to_ints
+
+segments
+
+#!fsharp
+
+let unique_sizes =
+  segments
+  |> Seq.groupBy Set.count
+  |> Seq.filter (fun (segment_count, patterns) -> (Seq.length patterns) = 1)
+  |> Seq.map (fun (x, y) -> x)
+  |> Set.ofSeq
+
+unique_sizes
+
+#!fsharp
+
+let how_many_unique_segments (input: seq<Line>) =
+  input
+  |> Seq.map (fun x -> x.Puzzle)
+  |> Seq.concat
+  |> Seq.filter (fun x -> unique_sizes.Contains (Set.count x))
+  |> Seq.length
+
+parseFile "sample2.txt"
+|> how_many_unique_segments
+
+#!fsharp
+
+parseFile "input.txt"
+|> how_many_unique_segments
+
+#!fsharp
+
+let all_segments =
+   "abcdefg"
+   |> pattern_to_ints
+
+all_segments
+
+#!fsharp
+
+let rec distribute e = function
+  | [] -> [[e]]
+  | x::xs' as xs -> (e::xs)::[for xs in distribute e xs' -> x::xs]
+
+let rec permute = function
+  | [] -> [[]]
+  | e::xs -> List.collect (distribute e) (permute xs)
+
+permute [1; 2; 3]
+
+#!fsharp
+
+(permute (List.ofSeq all_segments))
+
+#!fsharp
+
+type Mapping = list<int>
+
+#!fsharp
+
+let map_pattern (mapping: Mapping) (pattern: Pattern) : Pattern =
+  pattern |> Set.map (fun x -> mapping[x])
+
+let reverse_permutation = [6;5;4;3;2;1;0]
+
+map_pattern reverse_permutation (Set.ofList [0;1]),
+map_pattern reverse_permutation (Set.ofList [5;6]) 
+
+#!fsharp
+
+let map_patterns (mapping : Mapping) (patterns : Patterns) : Set<Pattern> =
+  patterns |> Set.map (map_pattern mapping)
+
+map_patterns reverse_permutation (Set.ofList [Set.ofList [1;2]; Set.ofList [5;6]])
+
+#!fsharp
+
+let forward_permutation = [0;1;2;3;4;5;6]
+let want_set = Set.ofSeq segments
+want_set
+
+#!fsharp
+
+let format_mapping (m : Mapping) : seq<string> =
+  m
+  |> Seq.mapi (fun i x -> string (char ((int 'a') + i)) + "->" + string (char (int ('a') + x)))
+  
+format_mapping reverse_permutation
+
+#!fsharp
+
+let find_good_mapping (ten : Patterns) : seq<Mapping> =
+  permute (List.ofSeq all_segments)
+  |> Seq.filter (fun mapping -> (map_patterns mapping ten) = want_set)
+
+let good_mapping =
+  parsePatterns "acedgfb cdfbe gcdfa fbcad dab cefabd cdfgeb eafb cagedb ab"
+  |> find_good_mapping
+  |> List.ofSeq
+
+good_mapping
+|> Seq.map format_mapping
+
+#!fsharp
+
+map_patterns good_mapping[0] (parsePatterns "cdfbe")
+
+#!fsharp
+
+let pattern_to_number (p : Pattern) : int =
+  segments
+  |> Seq.findIndex (fun x -> x = p)
+
+pattern_to_number (Set.ofList [0;1;3;5;6]),
+pattern_to_number (Set.ofList [2;5])
+
+#!fsharp
+
+let map_patterns_seq (mapping : Mapping) (patterns : seq<Pattern>) : seq<Pattern> =
+  patterns |> Seq.map (map_pattern mapping)
+
+#!fsharp
+
+parseFile "input.txt"
+|> Seq.map (fun x ->
+  let good_mapping =
+    find_good_mapping x.Ten
+    |> List.ofSeq
+
+  x.Puzzle
+  |> Seq.map (map_pattern good_mapping[0])
+  |> Seq.map pattern_to_number
+)
+|> Seq.map (fun x -> int (String.Join("", x)))
+|> Seq.sum
